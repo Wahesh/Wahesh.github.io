@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Line-art converter · Save as mahesh-cartoon.png</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem; background: #1a1a1a; color: #eee; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: #999; font-size: 0.9rem; margin-bottom: 1rem; }
+    input[type="file"] { margin-bottom: 1rem; }
+    canvas { display: block; max-width: 100%; height: auto; border: 1px solid #333; margin: 1rem 0; background: #fff; }
+    .actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+    a.dl { padding: 0.5rem 1rem; background: #58a6ff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; }
+    a.dl:hover { opacity: 0.9; }
+    .note { font-size: 0.8rem; color: #666; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Cartoonize to lines</h1>
+  <p>Pick a photo (e.g. your face). It will be converted to a line-art image. Download and save as <code>images/mahesh-cartoon.png</code> in this site so the hero avatar uses it.</p>
+  <input type="file" id="file" accept="image/*">
+  <div class="preview">
+    <canvas id="out" width="400" height="400"></canvas>
+  </div>
+  <div class="actions">
+    <a href="#" class="dl" id="download" download="mahesh-cartoon.png" style="display:none;">Download PNG</a>
+  </div>
+  <p class="note">Uses edge detection for a line-drawing look. For best result use a clear, front-facing photo.</p>
+
+  <script>
+    (function () {
+      var fileInput = document.getElementById('file');
+      var canvas = document.getElementById('out');
+      var downloadLink = document.getElementById('download');
+      var ctx = canvas.getContext('2d');
+
+      function toLineArt(img) {
+        var w = img.width;
+        var h = img.height;
+        var size = 400;
+        var scale = Math.min(size / w, size / h);
+        var dw = Math.round(w * scale);
+        var dh = Math.round(h * scale);
+        canvas.width = dw;
+        canvas.height = dh;
+        ctx.drawImage(img, 0, 0, dw, dh);
+        var imageData = ctx.getImageData(0, 0, dw, dh);
+        var data = imageData.data;
+        var gray = new Uint8Array(dw * dh);
+        var i, r, g, b, y, x, gx, gy, m;
+        for (i = 0; i < data.length; i += 4) {
+          r = data[i]; g = data[i + 1]; b = data[i + 2];
+          gray[i / 4] = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
+        }
+        var out = new Uint8Array(dw * dh);
+        for (i = 0; i < out.length; i++) out[i] = 255;
+        for (y = 1; y < dh - 1; y++) {
+          for (x = 1; x < dw - 1; x++) {
+            var idx = y * dw + x;
+            gx = -gray[idx - dw - 1] - 2 * gray[idx - 1] - gray[idx + dw - 1]
+                 + gray[idx - dw + 1] + 2 * gray[idx + 1] + gray[idx + dw + 1];
+            gy = -gray[idx - dw - 1] - 2 * gray[idx - dw] - gray[idx + dw - 1]
+                 + gray[idx - dw + 1] + 2 * gray[idx + dw] + gray[idx + dw + 1];
+            m = Math.min(255, Math.sqrt(gx * gx + gy * gy));
+            out[idx] = m > 52 ? 0 : 255;
+          }
+        }
+        for (i = 0; i < out.length; i++) {
+          data[i * 4] = out[i];
+          data[i * 4 + 1] = out[i];
+          data[i * 4 + 2] = out[i];
+          data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        downloadLink.href = canvas.toDataURL('image/png');
+        downloadLink.style.display = 'inline-block';
+      }
+
+      fileInput.addEventListener('change', function () {
+        var file = this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        var img = new Image();
+        img.onload = function () { toLineArt(img); };
+        img.src = URL.createObjectURL(file);
+      });
+    })();
+  </script>
+</body>
+</html>
