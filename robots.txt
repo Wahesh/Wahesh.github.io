@@ -1,0 +1,5 @@
+# Allow recruiters, ATS crawlers, and search engines to index this resume site.
+User-agent: *
+Allow: /
+
+Sitemap: https://wahesh.github.io/sitemap.xml
