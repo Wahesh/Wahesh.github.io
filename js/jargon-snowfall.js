@@ -419,16 +419,35 @@
     var geo = document.createElement('div');
     geo.className = 'flake-geometry';
 
+    /**
+     * Letters are placed along each ray from the hub outward. Without adjustment, rays that
+     * point screen-up (negative y) or screen-left stack characters in bottom-to-top or
+     * right-to-left order, which reads backwards. Reverse the string when exactly one of
+     * those applies; XOR avoids double-reversing on down-left diagonals (e.g. 225°).
+     */
+    function readingOrderAlongRay(angleDeg, chars) {
+      var rad = (angleDeg * Math.PI) / 180;
+      var pointsUp = Math.sin(rad) < -0.001;
+      var pointsLeft = Math.cos(rad) < -0.001;
+      var arr = chars.split('');
+      if (pointsUp !== pointsLeft) {
+        arr.reverse();
+      }
+      return arr;
+    }
+
     function placeRay(chars, angleDeg, outward) {
+      if (!chars || !chars.length) return;
       var rad = (angleDeg * Math.PI) / 180;
       var dir = outward ? 1 : -1;
-      for (var i = 0; i < chars.length; i++) {
+      var seq = readingOrderAlongRay(angleDeg, chars);
+      for (var i = 0; i < seq.length; i++) {
         var d = FLAKE_STEP_PX * (i + 1) * dir;
         var x = Math.cos(rad) * d;
         var y = Math.sin(rad) * d;
         var span = document.createElement('span');
         span.className = 'flake-char';
-        span.textContent = chars[i];
+        span.textContent = seq[i];
         span.style.transform =
           'translate(calc(-50% + ' + x + 'px), calc(-50% + ' + y + 'px))';
         geo.appendChild(span);
